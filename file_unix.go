@@ -1,4 +1,4 @@
-//go:build darwin || dragonfly || freebsd || illumos || linux || netbsd || openbsd
+//go:build !windows
 
 // Copyright Mycophonic.
 // Copyright Forkcloser.
