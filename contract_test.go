@@ -6,8 +6,8 @@
 
 package xos_test
 
-// The contract, from xos's docs: each function is its os namesake ("the same
-// filesystem features as golang os package"), and on Windows a file it opens
+// The contract, from xos's docs: each function is its os namesake ("Everything
+// else is os, call for call"), and on Windows a file it opens
 // can still be renamed or removed (FILE_SHARE_DELETE), and, on a volume with
 // the POSIX-semantics rename (NTFS; FAT and exFAT have none, and there
 // xos.Rename is os.Rename), Rename replaces a file another
