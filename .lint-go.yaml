@@ -61,13 +61,3 @@
 #     - github.com/example/project/internal/generated
 #   exclude-errors-in-files:         # appends file prefixes: NilAway has no per-line suppression
 #     - internal/legacy/
-golangci:
-  linters:
-    settings:
-      depguard:
-        rules:
-          main:
-            allow:
-              # The Windows open and rename: CreateFile with FILE_SHARE_DELETE and
-              # SetFileInformationByHandle are not in syscall.
-              - golang.org/x/sys/windows

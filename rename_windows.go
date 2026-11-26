@@ -5,9 +5,8 @@ package xos
 import (
 	"os"
 	"path/filepath"
+	"syscall"
 	"unsafe"
-
-	"golang.org/x/sys/windows"
 )
 
 // Rename renames (moves) oldpath to newpath, as os.Rename does, and on a volume
@@ -30,9 +29,9 @@ func Rename(oldpath, newpath string) error {
 // FileRenameInfoEx reads it.
 type fileRenameInfo struct {
 	Flags          uint32
-	RootDirectory  windows.Handle
+	RootDirectory  syscall.Handle
 	FileNameLength uint32
-	FileName       [windows.MAX_LONG_PATH]uint16
+	FileName       [syscall.MAX_LONG_PATH]uint16
 }
 
 // posixRename asks the filesystem to take newpath's name over at once, a handle
@@ -46,48 +45,48 @@ func posixRename(oldpath, newpath string) bool {
 		return false
 	}
 
-	name, err := windows.UTF16FromString(target)
-	if err != nil || len(name) > windows.MAX_LONG_PATH {
+	name, err := syscall.UTF16FromString(target)
+	if err != nil || len(name) > syscall.MAX_LONG_PATH {
 		return false
 	}
 
-	source, err := windows.UTF16PtrFromString(oldpath)
+	source, err := syscall.UTF16PtrFromString(oldpath)
 	if err != nil {
 		return false
 	}
 
-	handle, err := windows.CreateFile(
+	handle, err := syscall.CreateFile(
 		source,
-		windows.DELETE|windows.SYNCHRONIZE,
+		accessDelete|syscall.SYNCHRONIZE,
 		shareMode,
 		nil,
-		windows.OPEN_EXISTING,
-		windows.FILE_FLAG_BACKUP_SEMANTICS|windows.FILE_FLAG_OPEN_REPARSE_POINT,
+		syscall.OPEN_EXISTING,
+		syscall.FILE_FLAG_BACKUP_SEMANTICS|syscall.FILE_FLAG_OPEN_REPARSE_POINT,
 		0,
 	)
 	if err != nil {
 		return false
 	}
 
-	defer func() { _ = windows.CloseHandle(handle) }()
+	defer func() { _ = syscall.CloseHandle(handle) }()
 
 	// A directory goes to os.Rename: the POSIX rename would replace an empty
 	// directory in its way, as Unix does, where MoveFileEx refuses, and xos
 	// parts from os over held files alone.
-	var about windows.ByHandleFileInformation
-	if windows.GetFileInformationByHandle(handle, &about) != nil ||
-		about.FileAttributes&windows.FILE_ATTRIBUTE_DIRECTORY != 0 {
+	var about syscall.ByHandleFileInformation
+	if getFileInformationByHandle(handle, &about) != nil ||
+		about.FileAttributes&syscall.FILE_ATTRIBUTE_DIRECTORY != 0 {
 		return false
 	}
 
-	info := fileRenameInfo{Flags: windows.FILE_RENAME_REPLACE_IF_EXISTS | windows.FILE_RENAME_POSIX_SEMANTICS}
+	info := fileRenameInfo{Flags: fileRenameReplaceIfExists | fileRenamePOSIXSemantics}
 	copy(info.FileName[:], name)
 	info.FileNameLength = uint32((len(name) - 1) * 2) // #nosec G115 -- bounded by MAX_LONG_PATH above
 
-	return windows.SetFileInformationByHandle(
+	return setFileInformationByHandle(
 		handle,
-		windows.FileRenameInfoEx,
-		(*byte)(unsafe.Pointer(&info)), // #nosec G103 -- the struct is what the call reads
+		fileRenameInfoEx,
+		unsafe.Pointer(&info), // #nosec G103 -- the struct is what the call reads
 		uint32(unsafe.Sizeof(info)),
 	) == nil
 }

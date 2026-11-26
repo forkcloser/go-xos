@@ -16,20 +16,17 @@ import (
 	"reflect"
 	"syscall"
 	"unsafe"
-
-	"golang.org/x/sys/windows"
 )
 
 // procCreateFileW is the raw CreateFileW procedure handle.
-// Used instead of windows.CreateFile so we can capture GetLastError even for
+// Used instead of syscall.CreateFile so we can capture GetLastError even for
 // successful calls (needed to detect ERROR_ALREADY_EXISTS from OPEN_ALWAYS).
 //
 //nolint:gochecknoglobals // a lazily bound system procedure
-var procCreateFileW = windows.NewLazySystemDLL("kernel32.dll").
-	NewProc("CreateFileW")
+var procCreateFileW = kernel32.NewProc("CreateFileW")
 
 const (
-	shareMode = windows.FILE_SHARE_READ | windows.FILE_SHARE_WRITE | windows.FILE_SHARE_DELETE
+	shareMode = syscall.FILE_SHARE_READ | syscall.FILE_SHARE_WRITE | syscall.FILE_SHARE_DELETE
 
 	// opOpen is the PathError.Op for file open operations.
 	opOpen = "open"
@@ -39,21 +36,21 @@ const (
 )
 
 // The high 12 bits of an open flag carry FILE_FLAG_* attributes for CreateFile,
-// as syscall.Open takes them (windows.O_FILE_FLAG_*); a bit there that is no
+// as syscall.Open takes them; a bit there that is no
 // such flag is ErrInvalid.
 const (
 	fileFlagsMask      = 0xFFF00000
-	validFileFlagsMask = windows.FILE_FLAG_OPEN_REPARSE_POINT |
-		windows.FILE_FLAG_BACKUP_SEMANTICS |
-		windows.FILE_FLAG_OVERLAPPED |
-		windows.FILE_FLAG_OPEN_NO_RECALL |
-		windows.FILE_FLAG_SESSION_AWARE |
-		windows.FILE_FLAG_POSIX_SEMANTICS |
-		windows.FILE_FLAG_DELETE_ON_CLOSE |
-		windows.FILE_FLAG_SEQUENTIAL_SCAN |
-		windows.FILE_FLAG_NO_BUFFERING |
-		windows.FILE_FLAG_RANDOM_ACCESS |
-		windows.FILE_FLAG_WRITE_THROUGH
+	validFileFlagsMask = syscall.FILE_FLAG_OPEN_REPARSE_POINT |
+		syscall.FILE_FLAG_BACKUP_SEMANTICS |
+		syscall.FILE_FLAG_OVERLAPPED |
+		fileFlagOpenNoRecall |
+		fileFlagSessionAware |
+		fileFlagPOSIXSemantics |
+		fileFlagDeleteOnClose |
+		fileFlagSequentialScan |
+		fileFlagNoBuffering |
+		fileFlagRandomAccess |
+		fileFlagWriteThrough
 )
 
 // appendAccess combines the file access rights Go sets for O_APPEND on Windows:
@@ -75,10 +72,10 @@ func Open(path string) (*os.File, error) {
 //nolint:gocognit // mirrors the standard library's Windows open, whose shape it keeps for comparison
 func OpenFile(path string, flag int, perm os.FileMode) (*os.File, error) {
 	if path == "" {
-		return nil, &os.PathError{Op: opOpen, Path: path, Err: windows.ERROR_FILE_NOT_FOUND}
+		return nil, &os.PathError{Op: opOpen, Path: path, Err: syscall.ERROR_FILE_NOT_FOUND}
 	}
 
-	pathp, err := windows.UTF16PtrFromString(path)
+	pathp, err := syscall.UTF16PtrFromString(path)
 	if err != nil {
 		return nil, &os.PathError{Op: opOpen, Path: path, Err: err}
 	}
@@ -95,10 +92,10 @@ func OpenFile(path string, flag int, perm os.FileMode) (*os.File, error) {
 	if err != nil {
 		// Map ERROR_ACCESS_DENIED to EISDIR when the target is a directory
 		// opened without FILE_FLAG_BACKUP_SEMANTICS (i.e., for writing).
-		if errors.Is(err, windows.ERROR_ACCESS_DENIED) &&
-			attrs&windows.FILE_FLAG_BACKUP_SEMANTICS == 0 {
-			fa, faErr := windows.GetFileAttributes(pathp)
-			if faErr == nil && fa&windows.FILE_ATTRIBUTE_DIRECTORY != 0 {
+		if errors.Is(err, syscall.ERROR_ACCESS_DENIED) &&
+			attrs&syscall.FILE_FLAG_BACKUP_SEMANTICS == 0 {
+			fa, faErr := syscall.GetFileAttributes(pathp)
+			if faErr == nil && fa&syscall.FILE_ATTRIBUTE_DIRECTORY != 0 {
 				err = syscall.EISDIR
 			}
 		}
@@ -111,19 +108,19 @@ func OpenFile(path string, flag int, perm os.FileMode) (*os.File, error) {
 	// already empty. This matches the stdlib's condition check using
 	// ERROR_ALREADY_EXISTS from OPEN_ALWAYS.
 	if flag&os.O_TRUNC != 0 &&
-		(createmode == windows.OPEN_EXISTING || (createmode == windows.OPEN_ALWAYS && alreadyExists)) {
-		if truncErr := windows.SetEndOfFile(handle); truncErr != nil {
+		(createmode == syscall.OPEN_EXISTING || (createmode == syscall.OPEN_ALWAYS && alreadyExists)) {
+		if truncErr := setEndOfFile(handle); truncErr != nil {
 			// Silently ignore truncation failure on pipes and character devices,
 			// matching Go's internal syscall.Open behavior.
-			if errors.Is(truncErr, windows.ERROR_INVALID_PARAMETER) {
-				ft, ftErr := windows.GetFileType(handle)
-				if ftErr == nil && (ft == windows.FILE_TYPE_PIPE || ft == windows.FILE_TYPE_CHAR) {
+			if errors.Is(truncErr, errInvalidParameter) {
+				ft, ftErr := syscall.GetFileType(handle)
+				if ftErr == nil && (ft == syscall.FILE_TYPE_PIPE || ft == syscall.FILE_TYPE_CHAR) {
 					truncErr = nil
 				}
 			}
 
 			if truncErr != nil {
-				_ = windows.CloseHandle(handle) // best-effort cleanup on the failure path
+				_ = syscall.CloseHandle(handle) // best-effort cleanup on the failure path
 
 				return nil, &os.PathError{Op: opOpen, Path: path, Err: truncErr}
 			}
@@ -184,11 +181,11 @@ func Truncate(path string, size int64) error {
 
 // createFileShareDelete calls CreateFileW with FILE_SHARE_DELETE via raw syscall,
 // capturing GetLastError even for successful calls. This lets us detect
-// ERROR_ALREADY_EXISTS from OPEN_ALWAYS (the windows.CreateFile wrapper
+// ERROR_ALREADY_EXISTS from OPEN_ALWAYS (the syscall.CreateFile wrapper
 // discards the error for valid handles).
 func createFileShareDelete(
 	name *uint16, access, createmode, attrs uint32,
-) (handle windows.Handle, alreadyExists bool, err error) {
+) (handle syscall.Handle, alreadyExists bool, err error) {
 	rawHandle, _, lastErr := syscall.SyscallN(
 		procCreateFileW.Addr(),
 		uintptr(unsafe.Pointer(name)), // #nosec G103 -- required for the CreateFileW syscall
@@ -200,15 +197,15 @@ func createFileShareDelete(
 		0, // template file
 	)
 
-	handle = windows.Handle(rawHandle)
+	handle = syscall.Handle(rawHandle)
 
-	if handle == windows.InvalidHandle {
+	if handle == syscall.InvalidHandle {
 		// The Errno stays the PathError.Err OpenFile makes of it, as os keeps
 		// it: os.IsNotExist reads it by identity, and the text is os's.
 		return handle, false, lastErr //nolint:wrapcheck // see above
 	}
 
-	if lastErr == windows.ERROR_ALREADY_EXISTS {
+	if lastErr == syscall.ERROR_ALREADY_EXISTS {
 		alreadyExists = true
 	}
 
@@ -223,20 +220,20 @@ func accessMode(flag int) uint32 {
 	// syscall.Open gives it: a handle that can only be queried.
 	switch flag & (os.O_RDONLY | os.O_WRONLY | os.O_RDWR) {
 	case os.O_RDONLY:
-		access = windows.GENERIC_READ
+		access = syscall.GENERIC_READ
 	case os.O_WRONLY:
-		access = windows.GENERIC_WRITE
+		access = syscall.GENERIC_WRITE
 	case os.O_RDWR:
-		access = windows.GENERIC_READ | windows.GENERIC_WRITE
+		access = syscall.GENERIC_READ | syscall.GENERIC_WRITE
 	}
 
 	if flag&os.O_CREATE != 0 {
-		access |= windows.GENERIC_WRITE
+		access |= syscall.GENERIC_WRITE
 	}
 
 	if flag&os.O_APPEND != 0 {
 		if flag&os.O_TRUNC == 0 {
-			access &^= windows.GENERIC_WRITE
+			access &^= syscall.GENERIC_WRITE
 		}
 
 		access |= appendAccess
@@ -249,37 +246,37 @@ func accessMode(flag int) uint32 {
 func creationDisposition(flag int) uint32 {
 	switch {
 	case flag&(os.O_CREATE|os.O_EXCL) == (os.O_CREATE | os.O_EXCL):
-		return windows.CREATE_NEW
+		return syscall.CREATE_NEW
 	case flag&os.O_CREATE != 0:
-		return windows.OPEN_ALWAYS
+		return syscall.OPEN_ALWAYS
 	default:
-		return windows.OPEN_EXISTING
+		return syscall.OPEN_EXISTING
 	}
 }
 
 // fileAttributes maps Go flags and permissions to Windows file attributes.
 func fileAttributes(flag int, perm os.FileMode) uint32 {
-	var attrs uint32 = windows.FILE_ATTRIBUTE_NORMAL
+	var attrs uint32 = syscall.FILE_ATTRIBUTE_NORMAL
 
 	if perm&ownerWrite == 0 {
-		attrs = windows.FILE_ATTRIBUTE_READONLY
+		attrs = syscall.FILE_ATTRIBUTE_READONLY
 	}
 
 	// Prevent following symlinks during exclusive creation, matching Go's
 	// internal syscall.Open behavior.
 	if flag&(os.O_CREATE|os.O_EXCL) == (os.O_CREATE | os.O_EXCL) {
-		attrs |= windows.FILE_FLAG_OPEN_REPARSE_POINT
+		attrs |= syscall.FILE_FLAG_OPEN_REPARSE_POINT
 	}
 
 	// Allow opening directories for reading.
 	switch flag & (os.O_RDONLY | os.O_WRONLY | os.O_RDWR) {
 	case os.O_WRONLY, os.O_RDWR:
 	default:
-		attrs |= windows.FILE_FLAG_BACKUP_SEMANTICS
+		attrs |= syscall.FILE_FLAG_BACKUP_SEMANTICS
 	}
 
 	if flag&os.O_SYNC != 0 {
-		attrs |= windows.FILE_FLAG_WRITE_THROUGH
+		attrs |= fileFlagWriteThrough
 	}
 
 	return attrs | fileFlags(flag)

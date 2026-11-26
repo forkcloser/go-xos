@@ -6,8 +6,6 @@ import (
 	"os"
 	"testing"
 
-	"golang.org/x/sys/windows"
-
 	"github.com/forkcloser/xos"
 )
 
@@ -16,12 +14,13 @@ import (
 func TestFileFlags(t *testing.T) {
 	t.Parallel()
 
+	// The FILE_FLAG_* values, as Windows documents them for CreateFile.
 	for _, flag := range []int{
-		windows.O_FILE_FLAG_SEQUENTIAL_SCAN,
-		windows.O_FILE_FLAG_RANDOM_ACCESS,
-		windows.O_FILE_FLAG_OVERLAPPED,
-		windows.O_FILE_FLAG_WRITE_THROUGH,
-		windows.O_FILE_FLAG_DELETE_ON_CLOSE,
+		0x08000000, // FILE_FLAG_SEQUENTIAL_SCAN
+		0x10000000, // FILE_FLAG_RANDOM_ACCESS
+		0x40000000, // FILE_FLAG_OVERLAPPED
+		0x80000000, // FILE_FLAG_WRITE_THROUGH
+		0x04000000, // FILE_FLAG_DELETE_ON_CLOSE
 		0x00400000, // within the mask, no FILE_FLAG
 	} {
 		ours, theirs := pair(t, func(t *testing.T, path string) {
