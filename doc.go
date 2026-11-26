@@ -1,9 +1,3 @@
-// Copyright Mycophonic.
-// Copyright Forkcloser.
-//
-// Use of this source code is governed by the MIT license that can be
-// found in the LICENSE file.
-
 // Package xos is the standard library's os, with one difference on Windows:
 // every file it opens or creates carries FILE_SHARE_DELETE, so the file can
 // be renamed or removed while it is open, as on every other platform, and

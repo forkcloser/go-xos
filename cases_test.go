@@ -1,9 +1,3 @@
-// Copyright Mycophonic.
-// Copyright Forkcloser.
-//
-// Use of this source code is governed by the MIT license that can be
-// found in the LICENSE file.
-
 // Adapted from Go's os tests (src/os/os_test.go):
 //
 // Copyright 2009 The Go Authors. All rights reserved.

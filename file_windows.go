@@ -1,11 +1,5 @@
 //go:build windows
 
-// Copyright Mycophonic.
-// Copyright Forkcloser.
-//
-// Use of this source code is governed by the MIT license that can be
-// found in the LICENSE file.
-
 // Windows file operations with FILE_SHARE_DELETE.
 //
 // Go's os.Open/os.OpenFile open handles with FILE_SHARE_READ|FILE_SHARE_WRITE

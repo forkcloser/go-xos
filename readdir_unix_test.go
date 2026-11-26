@@ -2,11 +2,6 @@
 //
 //go:build darwin || dragonfly || freebsd || linux || netbsd || openbsd
 
-// Copyright Forkcloser.
-//
-// Use of this source code is governed by the MIT license that can be
-// found in the LICENSE file.
-
 package xos_test
 
 import (
