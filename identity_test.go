@@ -16,7 +16,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/forkcloser/xos"
+	"github.com/forkcloser/go-xos"
 )
 
 // identity is everything a caller can ask of an error without reading its

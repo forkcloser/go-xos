@@ -16,7 +16,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/forkcloser/xos"
+	"github.com/forkcloser/go-xos"
 )
 
 // opens are the four calls that hold a handle.
