@@ -19,7 +19,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/forkcloser/xos"
+	"github.com/forkcloser/go-xos"
 )
 
 // openFlags are every combination of access mode, the three and the one that

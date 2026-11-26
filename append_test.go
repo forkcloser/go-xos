@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/forkcloser/xos"
+	"github.com/forkcloser/go-xos"
 )
 
 // TestWriteAtOnAppend: WriteAt on a file opened with O_APPEND is refused as

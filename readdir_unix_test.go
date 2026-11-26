@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/forkcloser/xos"
+	"github.com/forkcloser/go-xos"
 )
 
 // TestReadDirOfWhatIsNoDirectory: ReadDir of a file that cannot be read, of

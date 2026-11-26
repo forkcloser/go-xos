@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/forkcloser/xos"
+	"github.com/forkcloser/go-xos"
 )
 
 // TestFileFlags: the FILE_FLAG_* bits of an open flag reach CreateFile, and

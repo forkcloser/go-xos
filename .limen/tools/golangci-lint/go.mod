@@ -1,6 +1,6 @@
 // golangci-lint's own module: its dependency graph stays exactly its upstream's,
 // which a shared tools module could not promise (book/tooling.md).
-module github.com/forkcloser/xos/tools/golangci-lint
+module github.com/forkcloser/go-xos/tools/golangci-lint
 
 go 1.26.0
 

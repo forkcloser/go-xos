@@ -19,7 +19,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/forkcloser/xos"
+	"github.com/forkcloser/go-xos"
 )
 
 func TestOpenNoName(t *testing.T) {

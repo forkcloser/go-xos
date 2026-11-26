@@ -9,11 +9,14 @@ names, the same errors, checked against `os` on the same filesystem state on
 every platform.
 
 ```go
-import "github.com/forkcloser/xos"
+import "github.com/forkcloser/go-xos"
 
 f, err := xos.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o644)
 err = xos.WriteFile(path, data, 0o644)
 ```
+
+Releases through v0.1.2 are `github.com/forkcloser/xos`, the repository's name
+until then.
 
 A program that opens, creates, renames or reads files that another process may
 replace under it uses `xos` where it would use `os`.

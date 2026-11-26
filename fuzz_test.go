@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/forkcloser/xos"
+	"github.com/forkcloser/go-xos"
 )
 
 // inside is name joined under dir, or "" when the join escapes dir or names
