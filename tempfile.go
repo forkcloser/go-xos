@@ -1,9 +1,3 @@
-// Copyright Mycophonic.
-// Copyright Forkcloser.
-//
-// Use of this source code is governed by the MIT license that can be
-// found in the LICENSE file.
-
 // Originally from go stdlib:
 //
 // Copyright 2010 The Go Authors. All rights reserved.
